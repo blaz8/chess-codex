@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chess App – Standalone</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(960px, 100%);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        align-items: center;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 1rem + 2vw, 2.5rem);
+        text-align: center;
+      }
+
+      p.subtitle {
+        margin: 8px 0 0;
+        text-align: center;
+        color: #cbd5f5;
+        font-size: 0.95rem;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .status {
+        padding: 6px 16px;
+        border-radius: 9999px;
+        background: #1e293b;
+        color: #e2e8f0;
+        font-weight: 600;
+        box-shadow: 0 10px 40px rgba(15, 23, 42, 0.4);
+      }
+
+      button {
+        border: none;
+        cursor: pointer;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+      }
+
+      button:focus-visible {
+        outline: 2px solid #fcd34d;
+        outline-offset: 2px;
+      }
+
+      button.action {
+        padding: 6px 18px;
+        font-size: 0.95rem;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.3);
+      }
+
+      button#new-game {
+        background: #fbbf24;
+        color: #111827;
+      }
+
+      button#new-game:hover {
+        background: #f59e0b;
+      }
+
+      button#undo {
+        background: #334155;
+        color: #e2e8f0;
+      }
+
+      button#undo:hover:not(:disabled) {
+        background: #475569;
+      }
+
+      button#undo:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .board-wrapper {
+        width: min(90vw, 520px);
+      }
+
+      .board {
+        position: relative;
+        width: 100%;
+        padding-top: 100%;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.6);
+        border-radius: 16px;
+        overflow: hidden;
+      }
+
+      .board-grid {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-template-rows: repeat(8, 1fr);
+      }
+
+      .square {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: clamp(2rem, 6vw, 3rem);
+        font-weight: 600;
+        transition: background 150ms ease;
+      }
+
+      .square.light {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+
+      .square.dark {
+        background: #334155;
+        color: #f8fafc;
+      }
+
+      .square.selected {
+        outline: 4px solid #fbbf24;
+        z-index: 1;
+      }
+
+      .square.legal-target::after {
+        content: "";
+        position: absolute;
+        width: 36%;
+        height: 36%;
+        border-radius: 9999px;
+        background: rgba(251, 191, 36, 0.6);
+        pointer-events: none;
+      }
+
+      .square.capture-target::after {
+        content: "";
+        position: absolute;
+        inset: 12%;
+        border-radius: 9999px;
+        border: 4px solid #fbbf24;
+        background: transparent;
+        pointer-events: none;
+      }
+
+      .square .coordinate {
+        position: absolute;
+        left: 6px;
+        bottom: 6px;
+        font-size: 0.55rem;
+        font-weight: 500;
+        color: rgba(15, 23, 42, 0.6);
+      }
+
+      .square.dark .coordinate {
+        color: rgba(248, 250, 252, 0.6);
+      }
+
+      @media (max-width: 520px) {
+        .square .coordinate {
+          display: none;
+        }
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js" integrity="sha512-/k08LomqKgkl0vvVuv5AO9M/dwZ0pniS3pSke1Mt2rt7NmBGG99nmCaTKty+O+kO5OVwOB1p5MNDoAuCEi0aNQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Chess App</h1>
+        <p class="subtitle">Play a quick game with simple click-to-move controls.</p>
+      </header>
+      <section class="controls">
+        <span id="status" class="status">Loading…</span>
+        <button id="new-game" class="action" type="button">New game</button>
+        <button id="undo" class="action" type="button" disabled>Undo</button>
+      </section>
+      <div class="board-wrapper">
+        <div class="board">
+          <div id="board" class="board-grid" aria-label="Chessboard" role="grid"></div>
+        </div>
+      </div>
+    </main>
+    <script>
+      (function () {
+        const files = ["a", "b", "c", "d", "e", "f", "g", "h"];
+        const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"];
+        const pieceGlyphs = {
+          w: { k: "♔", q: "♕", r: "♖", b: "♗", n: "♘", p: "♙" },
+          b: { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" }
+        };
+
+        const boardEl = document.getElementById("board");
+        const statusEl = document.getElementById("status");
+        const newGameBtn = document.getElementById("new-game");
+        const undoBtn = document.getElementById("undo");
+        const squareElements = new Map();
+
+        const chess = new window.Chess();
+        let selectedSquare = null;
+        let legalMoves = [];
+
+        function getSquareKey(rowIndex, colIndex) {
+          return `${files[colIndex]}${ranks[rowIndex]}`;
+        }
+
+        function getStatus() {
+          if (chess.isCheckmate()) {
+            const winner = chess.turn() === "w" ? "Black" : "White";
+            return `${winner} wins by checkmate`;
+          }
+
+          if (chess.isStalemate()) {
+            return "Stalemate";
+          }
+
+          if (chess.isDraw()) {
+            return "Draw";
+          }
+
+          const turn = chess.turn() === "w" ? "White" : "Black";
+          const checkSuffix = chess.inCheck() ? " (in check)" : "";
+          return `${turn} to move${checkSuffix}`;
+        }
+
+        function updateStatus() {
+          statusEl.textContent = getStatus();
+          undoBtn.disabled = chess.history().length === 0;
+        }
+
+        function updateHighlights() {
+          const legalTargets = new Set(legalMoves.map((move) => move.to));
+          const captureTargets = new Set(
+            legalMoves
+              .filter((move) => move.flags.includes("c") || move.flags.includes("e"))
+              .map((move) => move.to)
+          );
+
+          squareElements.forEach((el, square) => {
+            el.classList.toggle("selected", square === selectedSquare);
+            const isLegal = legalTargets.has(square);
+            el.classList.toggle("legal-target", isLegal);
+            el.classList.toggle("capture-target", captureTargets.has(square));
+            if (!isLegal) {
+              el.classList.remove("capture-target");
+            }
+          });
+        }
+
+        function updateBoard() {
+          squareElements.forEach((el, square) => {
+            const piece = chess.get(square);
+            el.querySelector(".piece").textContent = piece ? pieceGlyphs[piece.color][piece.type] : "";
+          });
+          updateStatus();
+          updateHighlights();
+        }
+
+        function clearSelection() {
+          selectedSquare = null;
+          legalMoves = [];
+          updateHighlights();
+        }
+
+        function handleSquareClick(square) {
+          if (selectedSquare) {
+            if (selectedSquare === square) {
+              clearSelection();
+              return;
+            }
+
+            const move = legalMoves.find((m) => m.to === square);
+            if (move) {
+              chess.move({ from: selectedSquare, to: square, promotion: move.promotion || "q" });
+              clearSelection();
+              updateBoard();
+              return;
+            }
+          }
+
+          const piece = chess.get(square);
+          if (piece && piece.color === chess.turn()) {
+            selectedSquare = square;
+            legalMoves = chess.moves({ square, verbose: true });
+            updateHighlights();
+          } else {
+            clearSelection();
+          }
+        }
+
+        function buildBoard() {
+          boardEl.innerHTML = "";
+          ranks.forEach((rank, rowIndex) => {
+            files.forEach((file, colIndex) => {
+              const square = `${file}${rank}`;
+              const squareEl = document.createElement("button");
+              squareEl.className = `square ${(rowIndex + colIndex) % 2 === 0 ? "light" : "dark"}`;
+              squareEl.type = "button";
+              squareEl.setAttribute("data-square", square);
+              squareEl.setAttribute("aria-label", `Square ${square}`);
+              squareEl.addEventListener("click", () => handleSquareClick(square));
+
+              const pieceEl = document.createElement("span");
+              pieceEl.className = "piece";
+              squareEl.appendChild(pieceEl);
+
+              const coordEl = document.createElement("span");
+              coordEl.className = "coordinate";
+              coordEl.textContent = square;
+              squareEl.appendChild(coordEl);
+
+              boardEl.appendChild(squareEl);
+              squareElements.set(square, squareEl);
+            });
+          });
+        }
+
+        newGameBtn.addEventListener("click", () => {
+          chess.reset();
+          clearSelection();
+          updateBoard();
+        });
+
+        undoBtn.addEventListener("click", () => {
+          chess.undo();
+          clearSelection();
+          updateBoard();
+        });
+
+        buildBoard();
+        updateBoard();
+      })();
+    </script>
+  </body>
+</html>
